@@ -37,7 +37,7 @@ A modern, fast, and efficient bulk downloader for MediaFire links with a clean w
 
 ### Usage
 
-1. Open your web browser and navigate to <code>http://localhost:5000</code>
+1. Open your web browser and navigate to <code>http://127.0.0.1:5000</code>
 2. Enter the MediaFire link and click "Download"
 3. Adjust the number of simultaneous downloads and click "Start"
 4. Monitor the progress and status of your downloads
