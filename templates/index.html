@@ -1,464 +1,1171 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MediaFire Bulk Downloader</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <meta name="description"
+        content="Super-fast multi-threaded MediaFire bulk file downloader with chunked parallel downloads">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
     <style>
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         :root {
-            --primary-color: #4361ee;
-            --secondary-color: #3f37c9;
-            --success-color: #4cc9f0;
-            --background-color: #f8f9fa;
-            --card-background: #ffffff;
+            --bg-primary: #0a0e1a;
+            --bg-secondary: #111827;
+            --bg-card: rgba(17, 24, 39, 0.7);
+            --bg-card-hover: rgba(24, 34, 56, 0.8);
+            --border-glass: rgba(255, 255, 255, 0.08);
+            --border-glass-hover: rgba(255, 255, 255, 0.15);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-dim: #64748b;
+            --accent-blue: #3b82f6;
+            --accent-cyan: #06b6d4;
+            --accent-purple: #8b5cf6;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-amber: #f59e0b;
+            --gradient-main: linear-gradient(135deg, #3b82f6, #8b5cf6, #06b6d4);
+            --gradient-glow: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(139, 92, 246, 0.15), rgba(6, 182, 212, 0.15));
+            --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.4);
+            --shadow-glow: 0 0 30px rgba(59, 130, 246, 0.1);
+            --radius-lg: 20px;
+            --radius-md: 14px;
+            --radius-sm: 10px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         body {
-            background-color: var(--background-color);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Animated background */
+        .bg-pattern {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            background:
+                radial-gradient(ellipse 600px 400px at 20% 20%, rgba(59, 130, 246, 0.06) 0%, transparent 70%),
+                radial-gradient(ellipse 500px 500px at 80% 80%, rgba(139, 92, 246, 0.05) 0%, transparent 70%),
+                radial-gradient(ellipse 400px 300px at 50% 50%, rgba(6, 182, 212, 0.04) 0%, transparent 70%);
+            animation: bgShift 20s ease-in-out infinite alternate;
+        }
+
+        @keyframes bgShift {
+            0% {
+                opacity: 0.7;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0.7;
+            }
         }
 
         .container {
-            max-width: 900px;
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 24px 20px;
+            position: relative;
+            z-index: 1;
         }
 
+        /* Header */
         .app-header {
             text-align: center;
-            margin: 2rem 0;
-            color: var(--primary-color);
+            padding: 48px 0 40px;
+        }
+
+        .app-header .logo-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 72px;
+            height: 72px;
+            background: var(--gradient-main);
+            border-radius: 22px;
+            margin-bottom: 20px;
+            font-size: 32px;
+            color: white;
+            box-shadow: 0 8px 32px rgba(59, 130, 246, 0.3);
+            animation: floatIcon 3s ease-in-out infinite;
+        }
+
+        @keyframes floatIcon {
+
+            0%,
+            100% {
+                transform: translateY(0px);
+            }
+
+            50% {
+                transform: translateY(-6px);
+            }
         }
 
         .app-header h1 {
-            font-weight: 700;
             font-size: 2.5rem;
-            margin-bottom: 0.5rem;
+            font-weight: 800;
+            background: var(--gradient-main);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.02em;
+            margin-bottom: 8px;
         }
 
         .app-header p {
-            color: #6c757d;
+            color: var(--text-secondary);
+            font-size: 1.05rem;
+            font-weight: 400;
+        }
+
+        /* Glass Cards */
+        .glass-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-lg);
+            padding: 28px;
+            box-shadow: var(--shadow-card);
+            transition: var(--transition);
+        }
+
+        .glass-card:hover {
+            border-color: var(--border-glass-hover);
+            box-shadow: var(--shadow-card), var(--shadow-glow);
         }
 
         .input-card {
-            background: var(--card-background);
-            border-radius: 15px;
-            padding: 2rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            margin-bottom: 2rem;
+            margin-bottom: 28px;
         }
 
-        #urls {
-            border: 2px solid #e9ecef;
-            border-radius: 10px;
-            padding: 1rem;
-            transition: border-color 0.3s ease;
-        }
-
-        #urls:focus {
-            border-color: var(--primary-color);
-            box-shadow: none;
-        }
-
-        .btn-download {
-            background: var(--primary-color);
-            border: none;
-            border-radius: 10px;
-            padding: 0.8rem 2rem;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-
-        .btn-download:hover {
-            background: var(--secondary-color);
-            transform: translateY(-2px);
-        }
-
-        .download-item {
-            background: var(--card-background);
-            margin-bottom: 1rem;
-            padding: 1.5rem;
-            border-radius: 12px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            transition: transform 0.2s ease;
-        }
-
-        .download-item:hover {
-            transform: translateY(-2px);
-        }
-
-        .download-header {
+        /* Form Label */
+        .form-label {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: 1rem;
-        }
-
-        .filename {
-            font-weight: 600;
-            color: #2d3748;
-            word-break: break-all;
-        }
-
-        .progress {
-            height: 0.8rem;
-            border-radius: 1rem;
-            background-color: #e9ecef;
-            margin: 1rem 0;
-        }
-
-        .progress-bar {
-            background-color: var(--success-color);
-            border-radius: 1rem;
-            transition: width 0.5s ease;
-        }
-
-        .download-stats {
-            display: flex;
-            justify-content: space-between;
+            gap: 8px;
             font-size: 0.9rem;
-            color: #718096;
-        }
-
-        .status-badge {
-            padding: 0.4rem 1rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
             font-weight: 600;
-        }
-
-        .status-downloading {
-            background-color: #e9ecef;
-            color: var(--primary-color);
-        }
-
-        .status-completed {
-            background-color: #d1fae5;
-            color: #065f46;
-        }
-
-        .status-failed {
-            background-color: #fee2e2;
-            color: #991b1b;
-        }
-
-        .error-message {
-            color: #dc2626;
-            font-size: 0.9rem;
-            margin-top: 0.5rem;
-        }
-
-        /* Animation for progress updates */
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.7; }
-            100% { opacity: 1; }
-        }
-
-        .downloading .progress-bar {
-            animation: pulse 2s infinite;
-        }
-
-        .download-controls {
-            display: flex;
-            align-items: center;
-        }
-
-        .download-controls button {
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            transition: all 0.2s ease;
-        }
-
-        .download-controls button:hover {
-            transform: scale(1.1);
-        }
-
-        .btn-warning {
-            background-color: #fbbf24;
-            border-color: #f59e0b;
-            color: #fff;
-        }
-
-        .btn-warning:hover {
-            background-color: #f59e0b;
-        }
-
-        .download-settings {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 1.5rem;
-        }
-
-        .downloads-header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-weight: 600;
-            color: #4a5568;
+            color: var(--text-secondary);
             margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
-        .download-value {
-            background: var(--primary-color);
-            color: white;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 0.9rem;
-            min-width: 24px;
-            text-align: center;
+        .form-label i {
+            color: var(--accent-blue);
         }
 
-        .range-container {
-            position: relative;
-            padding: 0 2px;
-            margin: 10px 0;
+        /* Textarea */
+        .url-input {
             width: 100%;
-            max-width: 300px;
-        }
-
-        .form-range {
-            width: 100%;
-            -webkit-appearance: none;
-            height: 4px;
-            background: linear-gradient(to right, var(--primary-color) var(--range-progress), #e9ecef var(--range-progress));
-            border-radius: 2px;
+            min-height: 140px;
+            padding: 16px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1.5px solid var(--border-glass);
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            font-family: 'Inter', monospace;
+            font-size: 0.92rem;
+            line-height: 1.7;
+            resize: vertical;
+            transition: var(--transition);
             outline: none;
         }
 
-        .form-range::-webkit-slider-thumb {
+        .url-input::placeholder {
+            color: var(--text-dim);
+        }
+
+        .url-input:focus {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+
+        /* Settings Row */
+        .settings-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 24px;
+            margin: 24px 0;
+            flex-wrap: wrap;
+        }
+
+        .setting-group {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .setting-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+
+        .setting-label i {
+            color: var(--accent-purple);
+        }
+
+        .worker-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 36px;
+            height: 32px;
+            padding: 0 10px;
+            background: var(--gradient-main);
+            border-radius: 10px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: white;
+        }
+
+        /* Range Slider */
+        .range-wrap {
+            flex: 1;
+            max-width: 280px;
+            min-width: 160px;
+        }
+
+        input[type="range"] {
             -webkit-appearance: none;
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            background: #ffffff;
-            border: 2px solid var(--primary-color);
+            appearance: none;
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 100px;
+            outline: none;
             cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
 
-        .form-range::-webkit-slider-thumb:hover {
-            transform: scale(1.1);
-        }
-
-        .form-range::-moz-range-thumb {
-            width: 16px;
-            height: 16px;
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
             border-radius: 50%;
-            background: #ffffff;
-            border: 2px solid var(--primary-color);
+            background: white;
+            border: 3px solid var(--accent-blue);
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
             cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            transition: var(--transition);
         }
 
-        .range-markers {
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+            box-shadow: 0 2px 16px rgba(59, 130, 246, 0.5);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: white;
+            border: 3px solid var(--accent-blue);
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+            cursor: pointer;
+        }
+
+        .range-labels {
             display: flex;
             justify-content: space-between;
-            padding: 4px 0;
-            margin-top: 4px;
+            font-size: 0.72rem;
+            color: var(--text-dim);
+            margin-top: 6px;
+            padding: 0 2px;
         }
 
-        .range-markers span {
-            color: #6c757d;
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            outline: none;
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 16px 24px;
+            font-size: 1rem;
+            color: white;
+            background: var(--gradient-main);
+            background-size: 200% 200%;
+            border-radius: var(--radius-md);
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+            animation: gradientMove 3s ease infinite;
+        }
+
+        @keyframes gradientMove {
+
+            0%,
+            100% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-icon {
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            border-radius: 8px;
+            font-size: 0.8rem;
+        }
+
+        .btn-pause {
+            background: var(--accent-amber);
+            color: #000;
+        }
+
+        .btn-resume {
+            background: var(--accent-green);
+            color: #fff;
+        }
+
+        .btn-cancel {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--accent-red);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-cancel:hover {
+            background: var(--accent-red);
+            color: white;
+        }
+
+        .btn-pause:hover {
+            filter: brightness(1.1);
+            transform: scale(1.08);
+        }
+
+        .btn-resume:hover {
+            filter: brightness(1.1);
+            transform: scale(1.08);
+        }
+
+        /* Action Bar */
+        .action-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .action-bar h2 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .action-bar h2 .count-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 26px;
+            height: 26px;
+            padding: 0 8px;
+            background: var(--gradient-main);
+            border-radius: 8px;
+            font-size: 0.78rem;
+            font-weight: 700;
+        }
+
+        .btn-clear {
+            padding: 8px 16px;
+            font-size: 0.82rem;
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-glass);
+            border-radius: 8px;
+        }
+
+        .btn-clear:hover {
+            background: rgba(239, 68, 68, 0.12);
+            color: var(--accent-red);
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        /* Download Items */
+        .downloads-list {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .download-item {
+            background: var(--bg-card);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            transition: var(--transition);
+            animation: slideIn 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .download-item:hover {
+            border-color: var(--border-glass-hover);
+            background: var(--bg-card-hover);
+        }
+
+        .dl-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+            gap: 12px;
+        }
+
+        .dl-filename {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--text-primary);
+            word-break: break-all;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .dl-filename .file-icon {
+            flex-shrink: 0;
+            width: 36px;
+            height: 36px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            background: var(--gradient-glow);
+            color: var(--accent-blue);
+            font-size: 0.9rem;
+        }
+
+        .dl-controls {
+            display: flex;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        /* Progress Bar */
+        .progress-track {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 100px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 100px;
+            background: var(--gradient-main);
+            background-size: 200% 100%;
+            transition: width 0.4s ease;
+            position: relative;
+        }
+
+        .downloading .progress-fill {
+            animation: progressGlow 2s ease-in-out infinite;
+        }
+
+        @keyframes progressGlow {
+
+            0%,
+            100% {
+                background-position: 0% 50%;
+                filter: brightness(1);
+            }
+
+            50% {
+                background-position: 100% 50%;
+                filter: brightness(1.2);
+            }
+        }
+
+        /* Stats Row */
+        .dl-stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+        }
+
+        .stat-item i {
             font-size: 0.75rem;
+            width: 16px;
+            text-align: center;
         }
 
-        @property --range-progress {
-            syntax: '<percentage>';
-            inherits: false;
-            initial-value: 0%;
+        .stat-item .stat-value {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .stat-spacer {
+            flex: 1;
+        }
+
+        /* Status Badges */
+        .status-pill {
+            padding: 4px 12px;
+            border-radius: 100px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .status-downloading {
+            background: rgba(59, 130, 246, 0.15);
+            color: var(--accent-blue);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .status-completed {
+            background: rgba(16, 185, 129, 0.12);
+            color: var(--accent-green);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .status-failed {
+            background: rgba(239, 68, 68, 0.12);
+            color: var(--accent-red);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .status-paused {
+            background: rgba(245, 158, 11, 0.12);
+            color: var(--accent-amber);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .status-cancelled {
+            background: rgba(100, 116, 139, 0.12);
+            color: var(--text-dim);
+            border: 1px solid rgba(100, 116, 139, 0.3);
+        }
+
+        .status-queued {
+            background: rgba(139, 92, 246, 0.12);
+            color: var(--accent-purple);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+        }
+
+        /* Error */
+        .dl-error {
+            margin-top: 10px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            background: rgba(239, 68, 68, 0.08);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: var(--accent-red);
+            font-size: 0.82rem;
+            word-break: break-word;
+        }
+
+        .dl-error i {
+            margin-right: 6px;
+        }
+
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            padding: 14px 20px;
+            border-radius: 12px;
+            font-size: 0.88rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: toastIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(16px);
+            min-width: 280px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        .toast-success {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: var(--accent-green);
+        }
+
+        .toast-error {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: var(--accent-red);
+        }
+
+        .toast-info {
+            background: rgba(59, 130, 246, 0.15);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: var(--accent-blue);
+        }
+
+        @keyframes toastIn {
+            from {
+                opacity: 0;
+                transform: translateX(40px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .toast-exit {
+            animation: toastOut 0.3s ease forwards;
+        }
+
+        @keyframes toastOut {
+            to {
+                opacity: 0;
+                transform: translateX(40px);
+            }
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 48px 20px;
+            color: var(--text-dim);
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+
+        .empty-state p {
+            font-size: 0.95rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+            .container {
+                padding: 16px 12px;
+            }
+
+            .app-header {
+                padding: 32px 0 28px;
+            }
+
+            .app-header h1 {
+                font-size: 1.8rem;
+            }
+
+            .glass-card {
+                padding: 20px;
+            }
+
+            .settings-row {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 16px;
+            }
+
+            .range-wrap {
+                max-width: 100%;
+            }
+
+            .dl-stats {
+                gap: 10px;
+            }
+
+            .stat-item {
+                font-size: 0.78rem;
+            }
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 32px 0;
+            color: var(--text-dim);
+            font-size: 0.8rem;
+        }
+
+        .footer a {
+            color: var(--accent-blue);
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
+
 <body>
+    <div class="bg-pattern"></div>
+    <div class="toast-container" id="toastContainer"></div>
+
     <div class="container">
-        <div class="app-header">
-            <h1><i class="fas fa-cloud-download-alt"></i> MediaFire Bulk Downloader</h1>
-            <p>Download multiple files simultaneously with ease</p>
-        </div>
-        
-        <div class="input-card">
-            <div class="mb-4">
-                <label for="urls" class="form-label fw-bold">
-                    <i class="fas fa-link"></i> Enter MediaFire URLs
-                </label>
-                <textarea class="form-control" id="urls" rows="5" 
-                          placeholder="Paste your MediaFire URLs here (one per line)..."></textarea>
+        <header class="app-header">
+            <div class="logo-icon">
+                <i class="fas fa-bolt"></i>
             </div>
-            
-            <div class="mb-4">
-                <div class="downloads-header">
-                    <i class="fas fa-tasks"></i> Simultaneous Downloads
-                    <span class="download-value" id="workerValue">1</span>
+            <h1>MediaFire Downloader</h1>
+            <p>Super-fast multi-threaded bulk downloads</p>
+        </header>
+
+        <!-- Input Card -->
+        <div class="glass-card input-card">
+            <label class="form-label" for="urls">
+                <i class="fas fa-link"></i> MediaFire URLs
+            </label>
+            <textarea id="urls" class="url-input" rows="5"
+                placeholder="Paste your MediaFire URLs here, one per line...&#10;&#10;https://www.mediafire.com/file/example1&#10;https://www.mediafire.com/file/example2"></textarea>
+
+            <div class="settings-row">
+                <div class="setting-group">
+                    <span class="setting-label">
+                        <i class="fas fa-layer-group"></i> Threads
+                    </span>
+                    <span class="worker-badge" id="workerValue">5</span>
                 </div>
-                <div class="range-container">
-                    <input type="range" class="form-range" id="workerSlider" 
-                           min="1" max="20" step="1" value="1">
-                    <div class="range-markers">
+                <div class="range-wrap">
+                    <input type="range" id="workerSlider" min="1" max="20" step="1" value="5">
+                    <div class="range-labels">
                         <span>1</span>
+                        <span>10</span>
                         <span>20</span>
                     </div>
                 </div>
             </div>
-            
-            <button class="btn btn-download btn-primary w-100" onclick="startDownload()">
-                <i class="fas fa-download me-2"></i>Start Download
+
+            <button class="btn btn-primary" id="btnStartDownload" onclick="startDownload()">
+                <i class="fas fa-rocket"></i>
+                Start Download
             </button>
         </div>
-        
-        <div id="downloads"></div>
+
+        <!-- Downloads Section -->
+        <div id="downloadsSection" style="display:none;">
+            <div class="action-bar">
+                <h2>
+                    <i class="fas fa-arrow-down" style="color: var(--accent-cyan);"></i>
+                    Downloads
+                    <span class="count-badge" id="downloadCount">0</span>
+                </h2>
+                <button class="btn btn-clear" onclick="clearCompleted()">
+                    <i class="fas fa-broom"></i> Clear Done
+                </button>
+            </div>
+            <div class="downloads-list" id="downloadsList"></div>
+        </div>
+
+        <div id="emptyState" class="empty-state" style="display:none;">
+            <i class="fas fa-cloud-download-alt"></i>
+            <p>No active downloads</p>
+        </div>
+
+        <footer class="footer">
+            Built by <a href="https://github.com/aamirxs" target="_blank">Aamir</a> &mdash; MediaFire Bulk Downloader
+        </footer>
     </div>
 
     <script>
+        // ── Elements ──
         const workerSlider = document.getElementById('workerSlider');
         const workerValue = document.getElementById('workerValue');
+        const downloadsSection = document.getElementById('downloadsSection');
+        const downloadsList = document.getElementById('downloadsList');
+        const downloadCount = document.getElementById('downloadCount');
+        const emptyState = document.getElementById('emptyState');
+        const btnStart = document.getElementById('btnStartDownload');
 
-        function updateSlider(value) {
-            workerValue.textContent = value;
-            const progress = (value - workerSlider.min) / (workerSlider.max - workerSlider.min) * 100;
-            workerSlider.style.setProperty('--range-progress', `${progress}%`);
-        }
+        let statusInterval = null;
+        let previousDownloads = {};
 
+        // ── Slider ──
         workerSlider.addEventListener('input', (e) => {
-            updateSlider(e.target.value);
+            workerValue.textContent = e.target.value;
         });
 
-        // Initialize the slider
-        updateSlider(workerSlider.value);
+        // ── Toast Notifications ──
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', info: 'fa-info-circle' };
+            toast.className = `toast toast-${type}`;
+            toast.innerHTML = `<i class="fas ${icons[type] || icons.info}"></i> ${message}`;
+            container.appendChild(toast);
 
+            setTimeout(() => {
+                toast.classList.add('toast-exit');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        // ── Formatting Helpers ──
+        function formatSize(bytes) {
+            if (!bytes || bytes === 0) return '0 B';
+            const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(1024));
+            return (bytes / Math.pow(1024, i)).toFixed(i > 0 ? 2 : 0) + ' ' + units[i];
+        }
+
+        function formatSpeed(bytesPerSec) {
+            if (!bytesPerSec || bytesPerSec <= 0) return '0 B/s';
+            const units = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
+            const i = Math.floor(Math.log(bytesPerSec) / Math.log(1024));
+            return (bytesPerSec / Math.pow(1024, i)).toFixed(2) + ' ' + units[i];
+        }
+
+        function formatETA(seconds) {
+            if (!seconds || seconds <= 0 || !isFinite(seconds)) return '--';
+            if (seconds < 60) return Math.ceil(seconds) + 's';
+            if (seconds < 3600) return Math.floor(seconds / 60) + 'm ' + Math.ceil(seconds % 60) + 's';
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            return h + 'h ' + m + 'm';
+        }
+
+        function getFileIcon(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            const map = {
+                zip: 'fa-file-zipper', rar: 'fa-file-zipper', '7z': 'fa-file-zipper',
+                mp4: 'fa-file-video', mkv: 'fa-file-video', avi: 'fa-file-video', mov: 'fa-file-video',
+                mp3: 'fa-file-audio', wav: 'fa-file-audio', flac: 'fa-file-audio',
+                jpg: 'fa-file-image', jpeg: 'fa-file-image', png: 'fa-file-image', gif: 'fa-file-image', webp: 'fa-file-image',
+                pdf: 'fa-file-pdf', doc: 'fa-file-word', docx: 'fa-file-word',
+                xls: 'fa-file-excel', xlsx: 'fa-file-excel',
+                exe: 'fa-file-code', msi: 'fa-file-code',
+                iso: 'fa-compact-disc',
+            };
+            return map[ext] || 'fa-file';
+        }
+
+        // ── Start Download ──
         function startDownload() {
-            const urls = document.getElementById('urls').value
-                .split('\n')
-                .map(url => url.trim())
-                .filter(url => url);
+            const urlsText = document.getElementById('urls').value.trim();
+            const urls = urlsText.split('\n').map(u => u.trim()).filter(u => u.length > 0);
 
             if (urls.length === 0) {
-                alert('Please enter at least one URL');
+                showToast('Please enter at least one URL', 'error');
                 return;
             }
 
-            // Get the selected number of workers from the slider
             const maxWorkers = parseInt(workerSlider.value);
+
+            btnStart.disabled = true;
+            btnStart.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting...';
 
             fetch('/api/download', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ 
-                    urls,
-                    max_workers: maxWorkers
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ urls, max_workers: maxWorkers })
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    alert(data.error);
-                }
-            });
+                .then(r => r.json())
+                .then(data => {
+                    if (data.error) {
+                        showToast(data.error, 'error');
+                    } else {
+                        showToast(`${data.count} download(s) started!`, 'success');
+                        if (data.errors && data.errors.length > 0) {
+                            data.errors.forEach(e => showToast(`Failed: ${e.url}`, 'error'));
+                        }
+                    }
+                    btnStart.disabled = false;
+                    btnStart.innerHTML = '<i class="fas fa-rocket"></i> Start Download';
+
+                    if (!statusInterval) {
+                        statusInterval = setInterval(updateStatus, 800);
+                    }
+                })
+                .catch(err => {
+                    showToast('Network error: ' + err.message, 'error');
+                    btnStart.disabled = false;
+                    btnStart.innerHTML = '<i class="fas fa-rocket"></i> Start Download';
+                });
         }
 
-        function formatSize(bytes) {
-            if (bytes === 0) return '0 Bytes';
-            const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        // ── Status Polling (in-place DOM updates — no blinking) ──
+        function createDownloadElement(id, dl) {
+            const div = document.createElement('div');
+            div.className = 'download-item';
+            div.dataset.id = id;
+            div.innerHTML = `
+                <div class="dl-header">
+                    <div class="dl-filename">
+                        <span class="file-icon"><i class="fas fa-file"></i></span>
+                        <span class="dl-name-text"></span>
+                    </div>
+                    <div class="dl-controls"></div>
+                </div>
+                <div class="progress-track">
+                    <div class="progress-fill" style="width: 0%"></div>
+                </div>
+                <div class="dl-stats">
+                    <span class="stat-item">
+                        <i class="fas fa-gauge-high"></i>
+                        <span class="stat-value dl-speed"></span>
+                    </span>
+                    <span class="stat-item">
+                        <i class="fas fa-hard-drive"></i>
+                        <span class="stat-value dl-downloaded"></span> / <span class="dl-total"></span>
+                    </span>
+                    <span class="stat-item">
+                        <i class="fas fa-clock"></i>
+                        ETA <span class="stat-value dl-eta"></span>
+                    </span>
+                    <span class="stat-spacer"></span>
+                    <span class="status-pill dl-status-pill"></span>
+                    <span class="stat-item">
+                        <span class="stat-value dl-percent"></span>
+                    </span>
+                </div>
+                <div class="dl-error-wrap"></div>
+            `;
+            return div;
+        }
+
+        function updateDownloadElement(el, id, dl) {
+            const progress = dl.progress ? dl.progress.toFixed(1) : '0.0';
+            const isActive = dl.status === 'downloading';
+            const isPaused = dl.status === 'paused';
+
+            // Update class for glow animation
+            el.classList.toggle('downloading', isActive);
+
+            // Filename & icon (only update if changed)
+            const nameEl = el.querySelector('.dl-name-text');
+            if (nameEl.textContent !== dl.filename) {
+                nameEl.textContent = dl.filename;
+                const iconEl = el.querySelector('.file-icon i');
+                iconEl.className = `fas ${getFileIcon(dl.filename)}`;
+            }
+
+            // Progress bar
+            el.querySelector('.progress-fill').style.width = progress + '%';
+
+            // Stats
+            el.querySelector('.dl-speed').textContent = formatSpeed(dl.speed);
+            el.querySelector('.dl-downloaded').textContent = formatSize(dl.downloaded);
+            el.querySelector('.dl-total').textContent = formatSize(dl.total_size);
+            el.querySelector('.dl-eta').textContent = formatETA(dl.eta);
+            el.querySelector('.dl-percent').textContent = progress + '%';
+
+            // Status pill
+            const pill = el.querySelector('.dl-status-pill');
+            pill.textContent = dl.status;
+            pill.className = `status-pill dl-status-pill status-${dl.status}`;
+
+            // Controls (only rebuild if status changed)
+            const prevStatus = el.dataset.status;
+            if (prevStatus !== dl.status) {
+                el.dataset.status = dl.status;
+                const controlsEl = el.querySelector('.dl-controls');
+                if (isActive) {
+                    controlsEl.innerHTML = `
+                        <button class="btn btn-icon btn-pause" onclick="controlDownload('${id}','pause')" title="Pause">
+                            <i class="fas fa-pause"></i>
+                        </button>
+                        <button class="btn btn-icon btn-cancel" onclick="controlDownload('${id}','cancel')" title="Cancel">
+                            <i class="fas fa-xmark"></i>
+                        </button>`;
+                } else if (isPaused) {
+                    controlsEl.innerHTML = `
+                        <button class="btn btn-icon btn-resume" onclick="controlDownload('${id}','resume')" title="Resume">
+                            <i class="fas fa-play"></i>
+                        </button>
+                        <button class="btn btn-icon btn-cancel" onclick="controlDownload('${id}','cancel')" title="Cancel">
+                            <i class="fas fa-xmark"></i>
+                        </button>`;
+                } else {
+                    controlsEl.innerHTML = '';
+                }
+            }
+
+            // Error
+            const errorWrap = el.querySelector('.dl-error-wrap');
+            if (dl.error) {
+                errorWrap.innerHTML = `<div class="dl-error"><i class="fas fa-triangle-exclamation"></i>${dl.error}</div>`;
+            } else if (errorWrap.firstChild) {
+                errorWrap.innerHTML = '';
+            }
         }
 
         function updateStatus() {
             fetch('/api/status')
-                .then(response => response.json())
+                .then(r => r.json())
                 .then(data => {
-                    const downloadsDiv = document.getElementById('downloads');
-                    downloadsDiv.innerHTML = '';
+                    const entries = Object.entries(data.downloads);
 
-                    Object.entries(data.downloads).forEach(([id, download]) => {
-                        const downloadItem = document.createElement('div');
-                        downloadItem.className = `download-item ${download.status === 'downloading' ? 'downloading' : ''}`;
+                    if (entries.length === 0) {
+                        downloadsSection.style.display = 'none';
+                        emptyState.style.display = 'block';
+                        downloadsList.innerHTML = '';
+                        return;
+                    }
 
-                        const speed = (download.speed / (1024 * 1024)).toFixed(2);
-                        const progress = download.progress.toFixed(1);
-                        const statusClass = download.status === 'completed' ? 'status-completed' : 
-                                          download.status === 'failed' ? 'status-failed' : 
-                                          'status-downloading';
+                    downloadsSection.style.display = 'block';
+                    emptyState.style.display = 'none';
+                    downloadCount.textContent = entries.length;
 
-                        downloadItem.innerHTML = `
-                            <div class="download-header">
-                                <div class="filename">
-                                    <i class="fas fa-file me-2"></i>${download.filename}
-                                </div>
-                                <div class="download-controls">
-                                    ${download.status === 'downloading' ? `
-                                        <button class="btn btn-sm btn-warning me-2" onclick="controlDownload('${id}', 'pause')">
-                                            <i class="fas fa-pause"></i>
-                                        </button>
-                                    ` : download.status === 'paused' ? `
-                                        <button class="btn btn-sm btn-success me-2" onclick="controlDownload('${id}', 'resume')">
-                                            <i class="fas fa-play"></i>
-                                        </button>
-                                    ` : ''}
-                                    ${(download.status === 'downloading' || download.status === 'paused') ? `
-                                        <button class="btn btn-sm btn-danger" onclick="controlDownload('${id}', 'cancel')">
-                                            <i class="fas fa-times"></i>
-                                        </button>
-                                    ` : ''}
-                                </div>
-                            </div>
-                            <div class="progress">
-                                <div class="progress-bar" role="progressbar" 
-                                     style="width: ${progress}%" 
-                                     aria-valuenow="${progress}" 
-                                     aria-valuemin="0" 
-                                     aria-valuemax="100">
-                                </div>
-                            </div>
-                            <div class="download-stats">
-                                <span>
-                                    <i class="fas fa-tachometer-alt me-1"></i>${speed} MB/s
-                                </span>
-                                <span>
-                                    <i class="fas fa-hard-drive me-1"></i>${formatSize(download.downloaded)} / ${formatSize(download.total_size)}
-                                </span>
-                                <span>${progress}%</span>
-                            </div>
-                            ${download.error ? `
-                                <div class="error-message">
-                                    <i class="fas fa-exclamation-circle me-1"></i>${download.error}
-                                </div>
-                            ` : ''}
-                        `;
-
-                        downloadsDiv.appendChild(downloadItem);
+                    // Toast for newly completed/failed
+                    entries.forEach(([id, dl]) => {
+                        const prev = previousDownloads[id];
+                        if (prev && prev.status !== 'completed' && dl.status === 'completed') {
+                            showToast(`✓ ${dl.filename} completed!`, 'success');
+                        }
+                        if (prev && prev.status !== 'failed' && dl.status === 'failed') {
+                            showToast(`✗ ${dl.filename} failed`, 'error');
+                        }
                     });
-                });
+
+                    previousDownloads = {};
+                    entries.forEach(([id, dl]) => previousDownloads[id] = { ...dl });
+
+                    // In-place DOM update — no flickering
+                    const currentIds = new Set(entries.map(([id]) => id));
+
+                    // Remove items that no longer exist
+                    Array.from(downloadsList.children).forEach(child => {
+                        if (!currentIds.has(child.dataset.id)) {
+                            child.remove();
+                        }
+                    });
+
+                    // Update or create items
+                    entries.forEach(([id, dl]) => {
+                        let el = downloadsList.querySelector(`[data-id="${id}"]`);
+                        if (!el) {
+                            el = createDownloadElement(id, dl);
+                            downloadsList.appendChild(el);
+                        }
+                        updateDownloadElement(el, id, dl);
+                    });
+                })
+                .catch(() => { });
         }
 
+        // ── Control Download ──
         function controlDownload(downloadId, action) {
             fetch('/api/download/control', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    download_id: downloadId,
-                    action: action
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ download_id: downloadId, action })
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.success) {
+                        showToast(`Failed to ${action} download`, 'error');
+                    } else {
+                        const labels = { pause: 'Paused', resume: 'Resumed', cancel: 'Cancelled' };
+                        showToast(`${labels[action] || action} download`, 'info');
+                    }
                 })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (!data.success) {
-                    alert('Failed to ' + action + ' download');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Failed to ' + action + ' download');
-            });
+                .catch(err => showToast(`Error: ${err.message}`, 'error'));
         }
 
-        // Update status every second
-        setInterval(updateStatus, 1000);
+        // ── Clear Completed ──
+        function clearCompleted() {
+            fetch('/api/clear', { method: 'POST' })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.cleared > 0) {
+                        showToast(`Cleared ${data.cleared} download(s)`, 'info');
+                    } else {
+                        showToast('Nothing to clear', 'info');
+                    }
+                    updateStatus();
+                })
+                .catch(err => showToast(`Error: ${err.message}`, 'error'));
+        }
+
+        // ── Keyboard shortcut: Ctrl+Enter to start ──
+        document.getElementById('urls').addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                startDownload();
+            }
+        });
+
+        // ── Start polling ──
+        statusInterval = setInterval(updateStatus, 800);
     </script>
 </body>
-</html> 
+
+</html>
