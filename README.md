@@ -1,49 +1,70 @@
-# MediaFire Bulk Downloader
+# ⚡ MediaFire Bulk Downloader
 
-A modern, fast, and efficient bulk downloader for MediaFire links with a clean web interface. Built with Python Flask and modern web technologies.
-
-<p align="center">
-  <img src="https://i.ibb.co/Jjc4dDM1/Screenshot-2025-01-29-055521.png" alt="MediaFire Bulk Downloader Interface">
-</p>
-
-## Created By
-**Aamir**
-- GitHub: [github.com/aamir](https://github.com/aamirxs)
+A **super-fast**, multi-threaded bulk downloader for MediaFire links with a stunning dark-mode web interface. Built with Python Flask.
 
 ## Features
 
-- 🚀 Multi-threaded downloads for maximum speed
-- 📦 Bulk download support
-- ⏯️ Pause/Resume functionality
-- ❌ Cancel specific downloads
-- 📊 Real-time progress tracking
-- 🎛️ Adjustable simultaneous downloads (1-20)
-- 🔄 Automatic retry on failures
-- 💾 Temporary file handling for safe downloads
-- 📝 Comprehensive error logging
+- ⚡ **Chunked Parallel Downloads** — Large files are split into 8 chunks downloaded simultaneously, then merged for maximum bandwidth
+- 🔄 **Connection Pooling** — Reusable HTTP sessions with keep-alive for reduced latency
+- 📥 **Resume Support** — Automatic HTTP Range detection for resumable downloads
+- 🧵 **Adjustable Threads** — 1 to 20 simultaneous downloads via slider
+- ⏯️ **Pause / Resume / Cancel** — Full control over each download
+- 📊 **Real-Time Stats** — Rolling-window speed, ETA, progress, and file-type icons
+- � **Auto Retry** — Exponential backoff on failures (up to 3 retries)
+- 🧹 **Clear Completed** — One-click cleanup of finished downloads
+- 🌙 **Premium Dark UI** — Glassmorphism, gradient animations, toast notifications
+- 📱 **Responsive** — Works on desktop and mobile
+- ⌨️ **Keyboard Shortcut** — Ctrl+Enter to start downloads
 
 ## Quick Start
 
 ### Prerequisites
 - Python 3.7+
-- pip (Python package manager)
+- pip
 
 ### Installation
 
-1. Clone the repository: bash <code>git clone https://github.com/aamirxs/Mediafire-downloader</code>
-2. Navigate to the project directory: bash <code>cd Mediafire-downloader</code>
-3. Install dependencies: bash <code>pip install -r requirements.txt</code>
-4. Run the application: bash <code>python app.py</code>
+```bash
+git clone https://github.com/aamirxs/Mediafire-downloader
+cd Mediafire-downloader
+pip install -r requirements.txt
+```
+
+### Run
+
+```bash
+python app.py
+```
+
+Open **`http://127.0.0.1:5000`** in your browser.
 
 ### Usage
 
-1. Open your web browser and navigate to <code>http://127.0.0.1:5000</code>
-2. Enter the MediaFire link and click "Download"
-3. Adjust the number of simultaneous downloads and click "Start"
-4. Monitor the progress and status of your downloads
+1. Paste MediaFire URLs (one per line)
+2. Adjust the thread count slider
+3. Click **Start Download** (or press Ctrl+Enter)
+4. Monitor progress, speed, and ETA in real-time
+5. Use pause/resume/cancel controls per download
+6. Click **Clear Done** to remove completed downloads
 
+## Tech Stack
 
+| Component | Technology |
+|-----------|-----------|
+| Backend | Python Flask |
+| Download Engine | `requests` + `ThreadPoolExecutor` + chunked parallel I/O |
+| Frontend | Vanilla HTML/CSS/JS, Inter font, Font Awesome |
 
+## API Endpoints
 
-            
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/` | Web UI |
+| `POST` | `/api/download` | Start downloads (`urls`, `max_workers`) |
+| `GET` | `/api/status` | Get all download statuses |
+| `POST` | `/api/download/control` | Pause/resume/cancel (`download_id`, `action`) |
+| `POST` | `/api/clear` | Clear completed/failed/cancelled downloads |
 
+## Created By
+
+**Aamir** — [github.com/aamirxs](https://github.com/aamirxs)
